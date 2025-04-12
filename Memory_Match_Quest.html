@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Match Quest</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .grid.level-1 {
+            grid-template-columns: repeat(2, 100px);
+            grid-template-rows: repeat(2, 100px);
+        }
+        .grid.level-2 {
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+        }
+        .grid.level-3 {
+            grid-template-columns: repeat(5, 100px);
+            grid-template-rows: repeat(5, 100px);
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background: #34495e;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            font-size: 2em;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s ease, transform 0.2s ease-in-out;
+        }
+        .card.flipped {
+            background: #1abc9c;
+            transform: scale(1.1);
+        }
+        .card.matched {
+            background: #2ecc71;
+            cursor: default;
+        }
+        .controls {
+            margin: 20px;
+            font-size: 1.2em;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: #fad0c4;
+            color: black;
+            border: none;
+            border-radius: 10px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover {
+            background: #ff9a9e;
+            transform: scale(1.1);
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 1em;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Memory Match Quest</h1>
+    <div class="controls">
+        <p>Level: <span id="level">1</span></p>
+        <p>Score: <span id="score">0</span></p>
+        <p>Time Left: <span id="timer">60</span> seconds</p>
+        <button onclick="startGame()">Start Game</button>
+    </div>
+    <div class="grid level-1" id="grid"></div>
+    <footer>By Manar Fawzy</footer>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const levelDisplay = document.getElementById('level');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+
+        const emojis = [
+            '🍎', '🍌', '🍇', '🍓', '🍒', '🍑', '🍍', '🥭',
+            '🍉', '🍋', '🥥', '🍈', '🥝', '🍅', '🍏'
+        ];
+
+        let level = 1;
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let firstCard = null;
+        let secondCard = null;
+        let matches = 0;
+
+        function startGame() {
+            level = 1;
+            score = 0;
+            timeLeft = 60;
+            matches = 0;
+            updateDisplays();
+            initializeLevel();
+            if (timerInterval) clearInterval(timerInterval);
+            startTimer();
+        }
+
+        function initializeLevel() {
+            grid.innerHTML = '';
+            grid.className = `grid level-${Math.min(level, 3)}`;
+            matches = 0;
+            const cardCount = level * 2 + 2;
+            const shuffledEmojis = shuffleEmojis(cardCount / 2);
+            shuffledEmojis.forEach(emoji => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.emoji = emoji;
+                card.addEventListener('click', () => flipCard(card));
+                grid.appendChild(card);
+            });
+        }
+
+        function shuffleEmojis(pairCount) {
+            const subsetEmojis = emojis.slice(0, pairCount);
+            const shuffledEmojis = subsetEmojis.flatMap(emoji => [emoji, emoji]);
+            shuffledEmojis.sort(() => Math.random() - 0.5);
+            return shuffledEmojis;
+        }
+
+        function flipCard(card) {
+            if (card.classList.contains('flipped') || card.classList.contains('matched') || secondCard) return;
+
+            card.textContent = card.dataset.emoji;
+            card.classList.add('flipped');
+
+            if (!firstCard) {
+                firstCard = card;
+            } else {
+                secondCard = card;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            if (firstCard.dataset.emoji === secondCard.dataset.emoji) {
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                score += 10;
+                matches++;
+                firstCard = null;
+                secondCard = null;
+                if (matches === level * 2 + 2) {
+                    level++;
+                    setTimeout(initializeLevel, 1000);
+                }
+            } else {
+                setTimeout(() => {
+                    firstCard.textContent = '';
+                    secondCard.textContent = '';
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    firstCard = null;
+                    secondCard = null;
+                }, 1000);
+            }
+            updateDisplays();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up! Game Over!');
+                    startGame();
+                }
+            }, 1000);
+        }
+
+        function updateDisplays() {
+            levelDisplay.textContent = level;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = timeLeft;
+        }
+    </script>
+</body>
+</html>
